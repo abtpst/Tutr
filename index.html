@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>Tutr</title>
+
+    <!-- Bootstrap Core CSS -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link href="css/business-casual.css" rel="stylesheet">
+
+    <!-- Fonts -->
+    <link href="http://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800" rel="stylesheet" type="text/css">
+    <link href="http://fonts.googleapis.com/css?family=Josefin+Slab:100,300,400,600,700,100italic,300italic,400italic,600italic,700italic" rel="stylesheet" type="text/css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+    <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js"></script>
+    <script type="text/javascript">
+
+    //<![CDATA[
+
+
+var customIcons = {
+      restaurant: {
+        icon: 'http://labs.google.com/ridefinder/images/mm_20_blue.png'
+      },
+      bar: {
+        icon: 'http://labs.google.com/ridefinder/images/mm_20_red.png'
+      }
+    };
+
+    var geocoder;
+	var map;
+			function initialize() {
+			
+			  geocoder = new google.maps.Geocoder();
+			
+			  var mapOptions = {
+				zoom: 8
+			  }
+			  map = new google.maps.Map(document.getElementById('map'), mapOptions);
+				var initialLocation;
+				if (navigator.geolocation) {
+					 navigator.geolocation.getCurrentPosition(function (position) {
+						 initialLocation = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+						 var init = initialLocation.toString();
+						 init = init.replace(/\(/g, '');
+						 init = init.replace(/\)/g, '');
+						 codeLatLng(init);
+						 map.setCenter(initialLocation);
+					 });
+				   
+				   
+				 }
+			 
+			}
+
+			function codeLatLng(input)
+			{
+			  var latlngStr = input.split(",",2);
+			  
+			  var lat = parseFloat(latlngStr[0]);
+			 
+			  var lng = parseFloat(latlngStr[1]);
+			  var latlng = new google.maps.LatLng(lat, lng);
+			  geocoder.geocode({'latLng': latlng}, function(results, status) {
+				if (status == google.maps.GeocoderStatus.OK) {
+				  if (results[1]) {
+					map.setZoom(11);
+					marker = new google.maps.Marker({
+						position: latlng,
+						map: map
+					});
+					 
+					  document.getElementById("address").value = results[1].formatted_address;
+					
+				  } else {
+					alert('No results found');
+				  }
+				} else {
+				  alert('Geocoder failed due to: ' + status);
+				}
+			  });
+			}
+			
+		function codeAddress() {
+			  var address = document.getElementById('address').value;
+			  geocoder.geocode( { 'address': address}, function(results, status) {
+				if (status == google.maps.GeocoderStatus.OK) {
+				  map.setCenter(results[0].geometry.location);
+				  var marker = new google.maps.Marker({
+					  map: map,
+					  position: results[0].geometry.location
+				  });
+				} else {
+				  alert('Geocode was not successful for the following reason: ' + status);
+				}
+			  });
+			}
+
+		function load() {
+
+		initialize();
+		
+        var infoWindow = new google.maps.InfoWindow;
+  
+		downloadUrl("getTutors.php", function(data) {
+        var xml = data.responseXML;
+        var markers = xml.documentElement.getElementsByTagName("marker");
+        for (var i = 0; i < markers.length; i++) {
+	
+          var firstName = markers[i].getAttribute("FirstName");
+          var lastName = markers[i].getAttribute("LastName");
+          var email = markers[i].getAttribute("Email");
+          var phoneNumber = markers[i].getAttribute("PhoneNumber");
+          var address = markers[i].getAttribute("Address");
+          var loc;
+
+          var marker;
+          var tutorImage = "\"Trollface.png\"";
+          var reviewImage = "\"5stars.png\"";
+          var profilePage = "\"http://www.google.com\"";
+          var calendarLink = "\"http://www.yahoo.com\"";
+
+          var html = "<b>" + firstName + " " + lastName + "</b> <br/>" + email + "</b> <br/><img src=" + tutorImage + " alt=\"The official HTML5 Icon\"> <br/>" + "<img src = " + reviewImage + " alt=\"Immmmmmmmmm\"> <br/>" + "<a href="+ profilePage +">Let`s see the Tutor</a>" + "</b> <br/>" + "<a href=" +calendarLink +">Calendar</a>";
+		  
+		  geocoder.geocode({ 'address': address }, function (results, status) {
+                if (status == google.maps.GeocoderStatus.OK) {
+                 //map.setCenter(results[0].geometry.location);
+          		marker = new google.maps.Marker({
+            	map: map,
+            	position: results[0].geometry.location,
+            	icon: 'http://labs.google.com/ridefinder/images/mm_20_blue.png'
+          	});
+
+          		bindInfoWindow(marker,map,infoWindow,html)
+
+                } else {
+                    alert("Request failed.")
+                }
+            });
+		}
+      });
+    }
+
+	function bindInfoWindow(marker,map,infoWindow,html){
+
+		google.maps.event.addListener(marker, 'click', function() {
+			
+			infoWindow.setContent(html);
+			
+			infoWindow.open(map, marker);
+
+			});
+	}
+		function downloadUrl(url, callback) {
+		  var request = window.ActiveXObject ?
+			  new ActiveXObject('Microsoft.XMLHTTP') :
+			  new XMLHttpRequest;
+
+		  request.onreadystatechange = function() {
+			if (request.readyState == 4) {
+			  request.onreadystatechange = doNothing;
+			  callback(request, request.status);
+			}
+		  };
+
+		  request.open('GET', url, true);
+		  request.send(null);
+		}
+	
+		function doNothing(){}
+		
+  </script>
+
+</head>
+
+<body onload="load()">
+
+<table style="font-size:12px;margin: 14px 20px;background-color:rgba(55, 0, 0, 0.4)" class="floatr">
+                
+                <tr>
+    <form action='index.html' method='post' accept-charset='UTF-8'>
+    
+    <input type='hidden' name='submitted' value='1'/>
+
+    <td style="padding: 10px">
+    <label for='username' style="color:white" >Email </label><br>
+    <input type='text' name='username'  maxlength="50" />
+    </td>
+ 
+    <td style="padding:10px">
+    <label for='password' style="color:white">Password </label><br>
+    <input type='password' name='password' maxlength="50" />
+    <input type='submit' name='Submit' value='Login' style="padding-right:5px; color:black"/>
+    <!--<input type='hidden' name='session' id = 'session'value="" />-->
+    </td>
+
+    </form>        
+               </tr>
+</table>
+
+    <div class="brand" style="margin: 0px 0px 0px 420px">Tutr</div>
+    <div class="address-bar">Find a tutor or teach</div>
+
+    <!-- Navigation -->
+    <nav class="navbar navbar-default" role="navigation">
+        <div class="container">
+            <!-- Brand and toggle get grouped for better mobile display -->
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <!-- navbar-brand is hidden on larger screens, but visible when the menu is collapsed -->
+                <a class="navbar-brand" href="index.html">Business Casual</a>
+            </div>
+            <!-- Collect the nav links, forms, and other content for toggling -->
+            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                <ul class="nav navbar-nav">
+                    <li>
+                        <a href="index.html">Home</a>
+                    </li>
+                    <li>
+                        <a href="about.html">About</a>
+                    </li>
+                    <li>
+                        <a href="signup.html">Register</a>
+                    </li>
+
+                     
+                </ul>
+
+    
+
+            </div>
+            <!-- /.navbar-collapse -->
+        </div>
+        <!-- /.container -->
+    </nav>
+
+    <div class="container">
+	<center>												<!--#ff0000-->
+        <div class="row" >
+			
+			<div style="background-color:#7fb17f;width:960px">
+				<div style="padding-top: 10px"></div>
+            
+			<div style="padding-top:3px"> <b style="color:white;font-size:20px; padding-right: 10px;">Search Locations</b>
+    
+				<input id="address" type="textbox" value="" style="width:300px;padding: 4px" >
+				<input type="button" value="Search" onclick="codeAddress()" style="padding:3px;border-radius:3px;margin-left:8px" >
+        
+			</div>
+						<br>
+			</div>
+			
+			<div style="height:400px;width:960px;margin-top:-4px" id="map">        </div>
+		</div>
+	</center>
+	</div>
+    <!-- /.container -->
+
+    <footer>
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-12 text-center">
+                    <p>Copyright &copy; Tutr 2015</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- jQuery -->
+    <script src="js/jquery.js"></script>
+
+    <!-- Bootstrap Core JavaScript -->
+    <script src="js/bootstrap.min.js"></script>
+
+    <!-- Script to Activate the Carousel -->
+    <script>
+    $('.carousel').carousel({
+        interval: 5000 //changes the speed
+    })
+    </script>
+
+</body>
+
+</html>
